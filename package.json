@@ -1,0 +1,13 @@
+{
+  "name": "innovation-lab",
+  "version": "1.0.0",
+  "description": "Testing text contrast",
+  "main": "canvas.js",
+  "type": "module",
+  "scripts": {
+    "start": "cd app && python app.py",
+    "generate": "cd generator && node generator"
+  },
+  "author": "Magdalena Maglicic",
+  "license": "ISC"
+}

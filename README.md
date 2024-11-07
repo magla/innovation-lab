@@ -1,2 +1,2 @@
-# innovation-lab
-Web accessibility analyzer - text contrast
+# Innovation Lab
+Web accessibility AI analyzer - text contrast

@@ -9,6 +9,10 @@ dist/
 htmlcov/
 .tox/
 docs/_build/
+**/*.ipynb_checkpoints/
+**/*/full_page_screenshot.png
+
+**/*/scraped_images
 
 generator/images
 generator/test
@@ -17,3 +21,5 @@ app/uploads
 
 notebooks/convolutional
 notebooks/*.csv
+notebooks/HTMLConvolutional
+notebooks/PixelsConvolutional

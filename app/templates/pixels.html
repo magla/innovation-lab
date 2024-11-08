@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+  <head> </head>
+  <body>
+    <header
+      style="
+        position: fixed;
+        background: black;
+        margin: 0;
+        top: 0;
+        left: 0;
+        width: 100%;
+        padding-left: 5px;
+        color: white;
+      "
+    >
+      <label style="float: left; padding: 10px">Choose standard:</label>
+      <select id="ratio">
+        <option default value="4.5">AA</option>
+        <option value="7">AAA</option>
+      </select>
+    </header>
+    <main style="padding-top: 100px">
+      <form
+        action="/predict-pixels"
+        method="post"
+        enctype="multipart/form-data"
+      >
+        <input type="file" name="file" accept="image/*" />
+        <input type="submit" value="Upload" />
+      </form>
+      <div id="canvases"></div>
+    </main>
+    <script
+      src="{{url_for('static', filename='canvas.js')}}"
+      type="module"
+    ></script>
+  </body>
+</html>

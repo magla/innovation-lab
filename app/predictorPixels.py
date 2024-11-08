@@ -3,7 +3,7 @@ import numpy as np
 from keras import models
 import tensorflow as tf
 
-model = tf.saved_model.load("../notebooks/convolutional")
+model = tf.saved_model.load("../notebooks/pixelsConvolutional")
 infer = model.signatures["serving_default"]
 
 def predict_validity(image_path):

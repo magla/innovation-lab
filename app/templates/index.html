@@ -1,12 +1,91 @@
-<!DOCTYPE html>
-<html>
-  <head> </head>
-  <body>
-    <main>
-      <form action="/predict-html" method="post" enctype="multipart/form-data">
-        <input type="text" name="url" />
-        <input type="submit" value="Submit" />
-      </form>
-    </main>
-  </body>
-</html>
+{% extends 'base.html' %} {% block style %}
+<style>
+  form input[type="text"] {
+    padding: 6px 12px;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.5;
+    color: #212529;
+    background-color: #fff;
+    background-clip: padding-box;
+    border: 1px solid #ced4da;
+    appearance: none;
+    border-radius: 4px;
+    min-width: 500px;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    :focus {
+      color: #212529;
+      background-color: #fff;
+      border-color: grey;
+      outline: 0;
+      box-shadow: 0 0 0 0.25rem rgb(13 110 253 / 25%);
+    }
+  }
+  form input[type="submit"] {
+    margin-left: 10px;
+    display: inline-block;
+    outline: none;
+    cursor: pointer;
+    font-weight: 600;
+    width: 100px;
+    border-radius: 3px;
+    padding: 10px 24px;
+    border: 0;
+    color: white;
+    background: #ff3d00;
+    line-height: 1.15;
+    font-size: 16px;
+    :hover {
+      transition: all 0.1s ease;
+      box-shadow: 0 0 0 0 #fff, 0 0 0 3px #ff3d00;
+    }
+  }
+  .loader {
+    width: 16px;
+    height: 16px;
+    display: none;
+    border-radius: 50%;
+    margin: 15px 0 15px 93px;
+    translate: -50px;
+    background: #fff;
+    box-shadow: -24px 0 #fff, 24px 0 #fff;
+    box-sizing: border-box;
+    animation: shadowPulse 2s linear infinite;
+  }
+
+  @keyframes shadowPulse {
+    33% {
+      background: #fff;
+      box-shadow: -24px 0 #ff3d00, 24px 0 #fff;
+    }
+    66% {
+      background: #ff3d00;
+      box-shadow: -24px 0 #fff, 24px 0 #fff;
+    }
+    100% {
+      background: #fff;
+      box-shadow: -24px 0 #fff, 24px 0 #ff3d00;
+    }
+  }
+</style>
+
+{% endblock %} {% block js %}
+<script
+  src="{{ url_for('static', filename='script.js')}}"
+  type="text/javascript"
+></script>
+{% endblock %} {% block content %}
+<h1>{% block title %} Is it accessible? {% endblock %}</h1>
+<form
+  action="/"
+  method="post"
+  enctype="multipart/form-data"
+  style="display: flex"
+>
+  <div style="width: 100px; height: 45px"></div>
+  <input type="text" name="url" />
+  <input type="submit" value="Check" id="submit" />
+  <span class="loader"></span>
+</form>
+<p>{{ category }}</p>
+{% endblock %}

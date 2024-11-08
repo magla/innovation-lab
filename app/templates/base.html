@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>{% block title %} {% endblock %}</title>
+    <style>
+      .content {
+        display: flex;
+        align-items: center;
+        justify-items: center;
+        flex-direction: column;
+      }
+    </style>
+    {% block style %} {% endblock %}
+  </head>
+  <body>
+    <main>
+      <div class="content">{% block content %} {% endblock %}</div>
+    </main>
+    {% block js %} {% endblock %}
+  </body>
+</html>

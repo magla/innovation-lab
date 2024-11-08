@@ -9,18 +9,15 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 from predictor import predict_validity as predictHTML
 
-@app.route('/')
-def landing():
-    return render_template('index.html')
-    
-@app.route('/predict-html', methods=['POST'])
-def upload_url():
+@app.route('/', methods=['GET', 'POST'])
+def index():
     if request.method == "POST":
         url = request.form.get('url')
 
         # Get prediction
         category = predictHTML(url)
-        return render_template('result.html', category=category)
+        return render_template('index.html', category=category if category != None else "Sorry, no results")
+    return render_template('index.html')
 
 if __name__ == "__main__":
     app.run(debug=True)

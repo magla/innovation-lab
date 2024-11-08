@@ -9,7 +9,6 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 import time
-from collections import Counter
 import os
 import random
 
@@ -20,7 +19,7 @@ OUTPUT_DIR = "scraped_images"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 model = tf.saved_model.load("../notebooks/HTMLConvolutional")
-infer = model.signatures["serving_default"]
+infer = model.signatures["my_custom_infer"]
 
 chrome_options = Options()
 chrome_options.add_argument("--headless")
@@ -151,6 +150,8 @@ def predict_validity(url):
     
     # Perform inference
     predictions = infer(batch_elements)
+    
+    print(predictions);
     
     # Get the predicted class
     predicted_classes = np.argmax(predictions['output_0'], axis=1)  # Get the index of the max value for each image

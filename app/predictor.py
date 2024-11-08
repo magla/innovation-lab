@@ -19,7 +19,7 @@ OUTPUT_DIR = "scraped_images"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 model = tf.saved_model.load("../notebooks/HTMLConvolutional")
-infer = model.signatures["my_custom_infer"]
+infer = model.signatures["serving_default"]
 
 chrome_options = Options()
 chrome_options.add_argument("--headless")

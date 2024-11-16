@@ -75,7 +75,7 @@
   type="text/javascript"
 ></script>
 {% endblock %} {% block content %}
-<h1>{% block title %} Is it accessible? {% endblock %}</h1>
+<h1>{% block title %} Is the color contrast okay? {% endblock %}</h1>
 <form
   action="/"
   method="post"
@@ -87,5 +87,20 @@
   <input type="submit" value="Check" id="submit" />
   <span class="loader"></span>
 </form>
-<p>{{ category }}</p>
-{% endblock %}
+<p>{{ text }}</p>
+
+{% if text %}
+<img
+  width="45%"
+  height="100%"
+  src="{{ url_for('static', filename='final_screenshot.png') }}"
+  alt="Full Page Screenshot"
+/>
+{% else %}
+<img
+  width="45%"
+  height="100%"
+  src="{{ url_for('static', filename='full_page_screenshot.png') }}"
+  alt="Final Screenshot"
+/>
+{% endif %} {% endblock %}

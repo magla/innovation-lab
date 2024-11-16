@@ -15,8 +15,15 @@ def index():
         url = request.form.get('url')
 
         # Get prediction
-        category = predictHTML(url)
-        return render_template('index.html', category=category if category != None else "Sorry, no results")
+        prediction = predictHTML(url)
+        
+        if prediction is None or len(prediction) <= 0:
+            text = "Sorry, no results"
+        else:
+            predictions = list(map(lambda item: item['prediction'], prediction))
+            text = 'Yes!' if all(predictions) == 1 else 'No, here are the problem areas:'
+    
+        return render_template('index.html', text=text)
     return render_template('index.html')
 
 if __name__ == "__main__":

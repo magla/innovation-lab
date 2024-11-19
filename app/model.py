@@ -12,29 +12,27 @@ import numpy as np
 import os
 import random
 
-# Scrape configuration
 IMAGE_SIZE = (48, 48)
 CONTRAST_THRESHOLD = 4.5
 OUTPUT_DIR = "static/scraped_images"
 SCREENSHOT_PATH = "static/full_page_screenshot.png"
 FINAL_SCREENSHOT_PATH = "static/final_screenshot.png"
-chrome_driver_path = '/opt/homebrew/bin/chromedriver'
-targetElements = ['h1', 'h2', 'h3']
+TARGET_ELEMENTS = ['h2']
 
-class CustomModel:
+class Model:
     def __init__(self, model=None):
         self.model = model
         self.driver = self._initialize_webdriver()
         self.selector_map = {}
-        self.X = []
-        self.y = []
 
     def _initialize_webdriver(self):
         chrome_options = Options()
         chrome_options.add_argument("--headless")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_driver_path = '/opt/homebrew/bin/chromedriver'
         driver = webdriver.Chrome(service=Service(chrome_driver_path), options=chrome_options)
+        driver.set_page_load_timeout(3)
         return driver
     
     def find_unique_xpath(self, element, soup):
@@ -47,21 +45,21 @@ class CustomModel:
                 break  # IDs are unique; no need to go further
             
             if current.has_attr('class'):
-                class_attr = ' '.join(current['class'])  # Classes are space-separated
+                class_attr = ' '.join(current['class'])
                 siblings = current.find_previous_siblings(name=current.name, class_=class_attr)
-                index = len(siblings) + 1  # XPath indices are 1-based
+                index = len(siblings) + 1
                 parts.insert(0, f"{current.name}[contains(@class, '{class_attr}')][{index}]")        
             else:
                 siblings = current.find_previous_siblings(name=current.name)
-                index = len(siblings) + 1  # XPath indices are 1-based
+                index = len(siblings) + 1
                 parts.insert(0, f"{current.name}[{index}]")
 
-            current = current.parent  # Move to the parent element
+            # Move to the parent element
+            current = current.parent
 
-        # Combine all parts into a full XPath
-        xpath = "/" + "/".join(parts)
+        xpath = ("/" + "/".join(parts)).replace("///", "//")
         
-        return xpath.replace("///", "//")
+        return xpath
 
     def screenshot_element(self, element):    
         """Takes a screenshot of the target element and saves it."""
@@ -87,9 +85,10 @@ class CustomModel:
 
     def preprocess_image(self, image_path):
         """Resize and preprocess image for CNN."""
-        image = Image.open(image_path).convert('L')
+        image = Image.open(image_path).convert('L')        
         image = image.resize((48, 48))
-        return np.array(image)
+        image_array = np.array(image)       
+        return image_array
 
     def fetch_html(self, url):
         """Fetch the HTML of a webpage."""
@@ -138,55 +137,57 @@ class CustomModel:
             print(f"An error occurred: {str(e)}")
             return False
 
-    def scrape_site(self, link):   
+    def screenshot_full_page(self):
+        window_size = self.driver.get_window_size()                            
+        full_page_height = self.driver.execute_script("return document.documentElement.scrollHeight;") 
+        self.driver.set_window_size(window_size['width'],full_page_height)
+        self.driver.save_screenshot(SCREENSHOT_PATH) 
+        
+        screenshot = Image.open(SCREENSHOT_PATH)
+        screenshot_width, screenshot_height = screenshot.size
+        
+        ratio = screenshot_width / screenshot_height    
+        screenshot = screenshot.resize((window_size['width'], int(window_size['width'] / ratio)))
+        screenshot.save(SCREENSHOT_PATH)
+
+    def extract_elements(self, soup):     
         elements = []
-             
+           
+        for element in soup.find_all(TARGET_ELEMENTS):
+            text = element.get_text(strip=True)
+            if text:
+                try:
+                    selector = self.find_unique_xpath(element, soup)
+                    driverElement = self.driver.find_element(By.XPATH, selector)
+                    
+                    if driverElement: 
+                        is_visible = self.is_element_visible(driverElement)
+                        
+                        if (not is_visible):
+                            continue
+                            
+                        self.selector_map[len(elements)] = selector 
+                        elements.append(self.get_image(driverElement))  
+                except Exception as e:
+                    print(f"{e}")
+        return elements
+
+    def get_image(self, element):
+        screenshot_path = self.screenshot_element(element)  
+        image_array = self.preprocess_image(screenshot_path) 
+        image_array = image_array / 255.0 
+        
+        return image_array
+
+    def scrape_site(self, link):      
         try:
             html_content = self.fetch_html(link)
             if html_content:
+                self.screenshot_full_page()
                 soup = BeautifulSoup(html_content, "html.parser")
-
-                # Set window size to current width, and max height
-                window_size = self.driver.get_window_size()                            
-                full_page_height = self.driver.execute_script("return document.documentElement.scrollHeight;") 
-                self.driver.set_window_size(window_size['width'],full_page_height)
-                self.driver.save_screenshot(SCREENSHOT_PATH) 
-                
-                screenshot = Image.open(SCREENSHOT_PATH)
-                screenshot_width, screenshot_height = screenshot.size
-                
-                ratio = screenshot_width / screenshot_height    
-                screenshot = screenshot.resize((window_size['width'], int(window_size['width'] / ratio)))
-                screenshot.save(SCREENSHOT_PATH)
-
-                # Extract target elements from body
-                for element in soup.find_all(targetElements):
-                    text = element.get_text(strip=True)
-                    if text:
-                        try:
-                            selector = self.find_unique_xpath(element, soup)
-                                                        
-                            if (not selector):
-                                continue
-                            
-                            driverElement = self.driver.find_element(By.XPATH, selector)
-                            
-                            if driverElement: 
-                                is_visible = self.is_element_visible(driverElement)
-                                
-                                if (not is_visible):
-                                    continue
-                                                         
-                                screenshot_path = self.screenshot_element(driverElement)
-                                image = self.preprocess_image(screenshot_path)                        
-                                elements.append(image)
-                                self.selector_map[len(elements) - 1] = selector
-                        except Exception as e:
-                            print(f"Error processing element with selector {selector}: {e}")
+                return self.extract_elements(soup)
         except Exception as e:
             print(f"Error processing {link}: {e}")
-            
-        return np.array(elements)
     
     def custom_infer(self, predictions, predicted_classes): 
         prediction_results = []
@@ -212,13 +213,13 @@ class CustomModel:
         self.driver.quit()
         
     def cleanup(self):
-        os.remove(SCREENSHOT_PATH)
+        if os.path.isfile(SCREENSHOT_PATH):
+            os.remove(SCREENSHOT_PATH)
         try:
             for filename in os.listdir(OUTPUT_DIR):
                 file_path = os.path.join(OUTPUT_DIR, filename)
                 if os.path.isfile(file_path):
                     os.remove(file_path)
-                    print(f"Removed file: {file_path}")
-            # print("All files removed successfully.")
+            print("All files removed successfully.")
         except Exception as e:
             print(f"Error: {e}")

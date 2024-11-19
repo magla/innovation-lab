@@ -11,6 +11,8 @@ htmlcov/
 docs/_build/
 **/*.ipynb_checkpoints/
 **/*/full_page_screenshot.png
+**/*/final_screenshot.png
 
 **/*/scraped_images
 notebooks/HTMLConvolutional
+notebooks/exported_data.csv

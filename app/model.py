@@ -17,7 +17,6 @@ CONTRAST_THRESHOLD = 4.5
 OUTPUT_DIR = "static/scraped_images"
 SCREENSHOT_PATH = "static/full_page_screenshot.png"
 FINAL_SCREENSHOT_PATH = "static/final_screenshot.png"
-TARGET_ELEMENTS = ['h2']
 
 class Model:
     def __init__(self, model=None):
@@ -85,10 +84,14 @@ class Model:
 
     def preprocess_image(self, image_path):
         """Resize and preprocess image for CNN."""
-        image = Image.open(image_path).convert('L')        
-        image = image.resize((48, 48))
-        image_array = np.array(image)       
-        return image_array
+        try:
+            image = Image.open(image_path).convert('L')        
+            image = image.resize((48, 48))
+            image_array = np.array(image)
+            image_array = np.expand_dims(image_array, axis=-1)
+            return image_array
+        except RequestException as e:
+            return None
 
     def fetch_html(self, url):
         """Fetch the HTML of a webpage."""
@@ -150,34 +153,38 @@ class Model:
         screenshot = screenshot.resize((window_size['width'], int(window_size['width'] / ratio)))
         screenshot.save(SCREENSHOT_PATH)
 
-    def extract_elements(self, soup):     
-        elements = []
-           
-        for element in soup.find_all(TARGET_ELEMENTS):
-            text = element.get_text(strip=True)
-            if text:
-                try:
-                    selector = self.find_unique_xpath(element, soup)
-                    driverElement = self.driver.find_element(By.XPATH, selector)
-                    
-                    if driverElement: 
-                        is_visible = self.is_element_visible(driverElement)
-                        
-                        if (not is_visible):
-                            continue
-                            
-                        self.selector_map[len(elements)] = selector 
-                        elements.append(self.get_image(driverElement))  
-                except Exception as e:
-                    print(f"{e}")
-        return elements
-
-    def get_image(self, element):
+    def categorize_element(self, element, url):
         screenshot_path = self.screenshot_element(element)  
         image_array = self.preprocess_image(screenshot_path) 
+        contrast_ratio = self.calculate_contrast(Image.fromarray(image_array.squeeze()))
+        accessible = 1 if contrast_ratio >= CONTRAST_THRESHOLD else 0  
         image_array = image_array / 255.0 
+        tag = element.tag_name
         
-        return image_array
+        self.X.append([image_array, tag, url])
+        self.y.append(accessible)
+    
+    def extract_elements(self, soup, url):
+        elements = [
+            element for element in soup.find_all() 
+            if element.string and element.string.strip()
+        ]
+        
+        for element in elements:
+            try:
+                selector = self.find_unique_xpath(element, soup)
+                driverElement = self.driver.find_element(By.XPATH, selector)
+                
+                if driverElement: 
+                    is_visible = self.is_element_visible(driverElement)
+                    
+                    if (not is_visible):
+                        continue
+                        
+                    self.categorize_element(driverElement, url)
+                    self.selector_map[len(self.X)] = selector     
+            except Exception as e:
+                print(f"{e}")
 
     def scrape_site(self, link):      
         try:
@@ -185,7 +192,7 @@ class Model:
             if html_content:
                 self.screenshot_full_page()
                 soup = BeautifulSoup(html_content, "html.parser")
-                return self.extract_elements(soup)
+                self.extract_elements(soup, link)
         except Exception as e:
             print(f"Error processing {link}: {e}")
     

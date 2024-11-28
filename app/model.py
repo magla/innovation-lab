@@ -66,7 +66,7 @@ class Model:
         element_size = element.size
         screenshot = Image.open(SCREENSHOT_PATH)
         screenshot_width, screenshot_height = screenshot.size
-        
+
         element_left = element_location['x']
         element_top = element_location['y']
         element_right = min(screenshot_width, element_left + element_size['width']) 
@@ -82,13 +82,12 @@ class Model:
         cropped_image.save(element_screenshot_path)
         return element_screenshot_path
 
-    def preprocess_image(self, image_path):
+    def preprocess_image(self, image):
         """Resize and preprocess image for CNN."""
-        try:
-            image = Image.open(image_path).convert('L')        
-            image = image.resize((48, 48))
+        try:       
             image_array = np.array(image)
             image_array = np.expand_dims(image_array, axis=-1)
+            image_array = image_array / 255.0 
             return image_array
         except RequestException as e:
             return None
@@ -104,6 +103,27 @@ class Model:
         except RequestException as e:
             print(f"Error fetching {url}: {e}")
     
+    
+    def crop_to_center(self, image, target_size=IMAGE_SIZE):
+        width, height = image.size
+        crop_width, crop_height = target_size
+        
+        if width < crop_width or height < crop_height:
+            scale = max(crop_width / width, crop_height / height)
+            new_width = int(width * scale)
+            new_height = int(height * scale)
+            image = image.resize((new_width, new_height))
+            
+        width, height = image.size
+        
+        left = (width - crop_width) // 2
+        top = (height - crop_height) // 2
+        right = left + crop_width
+        bottom = top + crop_height
+        
+        cropped_image = image.crop((left, top, right, bottom))
+        
+        return cropped_image
     
     def is_element_visible(self, element):
         try:        
@@ -152,19 +172,9 @@ class Model:
         ratio = screenshot_width / screenshot_height    
         screenshot = screenshot.resize((window_size['width'], int(window_size['width'] / ratio)))
         screenshot.save(SCREENSHOT_PATH)
-
-    def categorize_element(self, element, url):
-        screenshot_path = self.screenshot_element(element)  
-        image_array = self.preprocess_image(screenshot_path) 
-        contrast_ratio = self.calculate_contrast(Image.fromarray(image_array.squeeze()))
-        accessible = 1 if contrast_ratio >= CONTRAST_THRESHOLD else 0  
-        image_array = image_array / 255.0 
-        tag = element.tag_name
-        
-        self.X.append([image_array, tag, url])
-        self.y.append(accessible)
     
-    def extract_elements(self, soup, url):
+    def extract_elements(self, soup):
+        extracted = []
         elements = [
             element for element in soup.find_all() 
             if element.string and element.string.strip()
@@ -180,11 +190,19 @@ class Model:
                     
                     if (not is_visible):
                         continue
-                        
-                    self.categorize_element(driverElement, url)
-                    self.selector_map[len(self.X)] = selector     
+
+                    screenshot_path = self.screenshot_element(driverElement)  
+                    image = Image.open(screenshot_path)
+                    image = image.convert('L')
+                    image = self.crop_to_center(image) 
+                    image_array = self.preprocess_image(image) 
+        
+                    extracted.append(image_array)
+                    self.selector_map[len(extracted) - 1] = selector     
             except Exception as e:
                 print(f"{e}")
+            
+        return extracted
 
     def scrape_site(self, link):      
         try:
@@ -192,7 +210,7 @@ class Model:
             if html_content:
                 self.screenshot_full_page()
                 soup = BeautifulSoup(html_content, "html.parser")
-                self.extract_elements(soup, link)
+                return self.extract_elements(soup)
         except Exception as e:
             print(f"Error processing {link}: {e}")
     

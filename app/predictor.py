@@ -17,7 +17,6 @@ def predict_validity(url):
     # Stack all the images into a batch
     batch_elements = tf.stack(elements)
     batch_elements = tf.cast(batch_elements, tf.float32)
-    batch_elements = tf.expand_dims(batch_elements, axis=-1)
 
     # Perform inference
     predictions = infer(batch_elements)

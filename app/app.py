@@ -16,7 +16,7 @@ def index():
 
         # Get prediction
         prediction = predictHTML(url)
-        
+                
         if prediction is None or len(prediction) <= 0:
             text = "Sorry, no results"
         else:
